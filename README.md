@@ -120,30 +120,3 @@ This project is licensed under the **MIT License**.
 You are free to clone, modify, and use the code for personal or research purposes.
 
 ***
-
-Now, once this file is added as `README.md` in your folder, I’ll guide you through pushing it via terminal.
-
-Would you like this project uploaded to **a new repo named "AI-Study-Agent"**, and should it be **public or private**?  
-Once you confirm that, I’ll give you the **exact git commands** to initialize, commit, and push the whole thing from your terminal.
-
-Sources
-[1] google-gemini/api-examples https://github.com/google-gemini/api-examples
-[2] Gemini API quickstart - Google AI for Developers https://ai.google.dev/gemini-api/docs/quickstart
-[3] Text Summarization Project https://github.com/piyushkumar002/text-summarization
-[4] callstack/ai-summarization https://github.com/callstack/ai-summarization
-[5] google-gemini/cookbook: Examples and guides for using ... https://github.com/google-gemini/cookbook
-[6] Gemini 2.5 Pro API: A Guide With Demo Project https://www.datacamp.com/tutorial/gemini-2-5-pro-api
-[7] Gemini API in Vertex AI quickstart https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart
-[8] LLMs-Based Agents for GitHub README.MD Summarization https://arxiv.org/html/2503.10876v1
-[9] Gemini API with Python - Getting Started Tutorial https://www.youtube.com/watch?v=qfWpPEgea2A
-[10] rrrreddy/genai-text-summarization https://github.com/rrrreddy/genai-text-summarization
-[11] saksham-jain177/AI-Agent-based-Deep-Research https://github.com/saksham-jain177/AI-Agent-based-Deep-Research
-[12] Gemini API: File API Quickstart - Colab - Google https://colab.research.google.com/github/google-gemini/cookbook/blob/main/quickstarts/File_API.ipynb
-[13] I built an AI Agent that creates README file for your code https://www.reddit.com/r/ChatGPTPromptGenius/comments/1iixh89/i_built_an_ai_agent_that_creates_readme_file_for/
-[14] A better Google Gemini API "Hello World!" sample https://dev.to/wescpy/a-better-google-gemini-api-hello-world-sample-4ddm
-[15] document-summarizer · GitHub Topics https://github.com/topics/document-summarizer
-[16] I Built An AI Agent To Review & Summarize Any PDF File ... https://www.youtube.com/watch?v=na6TY5Bk0oE
-[17] A Gemini powered information extraction library https://developers.googleblog.com/en/introducing-langextract-a-gemini-powered-information-extraction-library/
-[18] Project-Based Learning: Build an AI Text Summarizer app ... https://github.com/genie360s/postman-course-ai-text-summarizer
-[19] How to Summarize PDFs with AI (March 2024) https://www.whatplugin.ai/blog/how-to-summarize-pdfs-with-ai
-[20] PDF Text Summarization and Q&A Chatbot This project is ... https://github.com/AkshayAcharyaN/Text_Summarizer_ChatBot
