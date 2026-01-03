@@ -21,8 +21,28 @@ try:
 except ImportError:
     pypandoc = None
 
+import asyncio
+import json
+import re
+from openai import OpenAI
+import audio_generator
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 # --- 1. CONFIGURATION ---
-GOOGLE_API_KEY = 'x'
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+OPENROUTER_BASE_URL = os.getenv('OPENROUTER_BASE_URL', "https://openrouter.ai/api/v1")
+
+if not GOOGLE_API_KEY:
+    print("Warning: GOOGLE_API_KEY not found in .env file.")
+if not OPENROUTER_API_KEY:
+    print("Warning: OPENROUTER_API_KEY not found in .env file.")
+
 # The PDF_FILE_PATH is now found automatically!
 
 # --- 2. HELPER FUNCTIONS (The Core Machinery) ---
@@ -41,17 +61,80 @@ def extract_text_from_pdf(pdf_path):
     print("Text extraction complete.")
     return full_text
 
+import time
+
 def generate_ai_response(api_key, prompt):
-    """Sends the request to the Gemini AI and gets the response."""
+    """Sends the request to the Gemini AI and gets the response, with retry logic."""
     print("Sending request to AI... This may take a moment.")
+    
+    # Retry configuration
+    max_retries = 3
+    retry_delay = 10  # seconds
+    
+    genai.configure(api_key=api_key)
+    
+    # Set up safe settings to avoid blocking academic content
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+    ]
+    
+    # UPDATED: Using 'gemini-flash-latest' (1.5 Flash) which is more stable/generous than 2.0 Preview
+    model = genai.GenerativeModel('gemini-flash-latest')
+
+    for attempt in range(max_retries):
+        try:
+            response = model.generate_content(prompt, safety_settings=safety_settings)
+            print("AI response received.")
+            return response.text
+        except Exception as e:
+            print(f"Warning: AI request failed (Attempt {attempt + 1}/{max_retries}). Details: {e}")
+            if "429" in str(e):
+                print(f"Quota exceeded. Waiting {retry_delay} seconds before retrying...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                # For non-quota errors, maybe waiting won't help, but let's try once more just in case
+                if attempt < max_retries - 1:
+                    time.sleep(5)
+                else:
+                    print("Error: Max retries reached. Could not get response.")
+                    return None
+    return None
+
+def generate_podcast_script(context_text, api_key):
+    """
+    Generates a dialogue script using OpenRouter.
+    """
+    print("Connecting to OpenRouter for Script Generation...")
+    client = OpenAI(
+        base_url=OPENROUTER_BASE_URL,
+        api_key=api_key
+    )
+    
+    prompt = PHASE_4_PROMPT.format(input_text=context_text)
+    
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        response = model.generate_content(prompt)
-        print("AI response received.")
-        return response.text
+        completion = client.chat.completions.create(
+            # extra_headers={
+            #     "HTTP-Referer": "<YOUR_SITE_URL>", # Optional. Site URL for rankings on openrouter.ai.
+            #     "X-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.
+            # },
+            # UPDATED: Using the model ID you seemed to intend, based on your previous edit
+            model="xiaomi/mimo-v2-flash:free", 
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        return completion.choices[0].message.content
     except Exception as e:
-        return f"Error: Could not get response from AI. Details: {e}"
+        print(f"Error generating podcast script: {e}")
+        return None
 
 def save_output_to_md(output_text, filename, folder):
     """Saves the given text into a Markdown file in a specific folder."""
@@ -69,6 +152,10 @@ def convert_md_to_docx(md_content, filename, folder):
         print("Skipping .docx conversion: pypandoc library not installed.")
         return
     
+    # Fix: Sanitize content to prevent Pandoc from reading careless AI "---" dividers as failed YAML metadata
+    if md_content.strip().startswith("---"):
+        md_content = f"# {filename}\n\n" + md_content
+
     docx_filename = f"{filename}.docx"
     full_path = os.path.join(folder, docx_filename)
     print(f"Converting to Word document: {full_path}...")
@@ -78,7 +165,7 @@ def convert_md_to_docx(md_content, filename, folder):
     except OSError:
         print("\nWARNING: Pandoc program not found. Please install from https://pandoc.org/installing.html\n")
 
-# --- 3. THE PROMPT BLUEPRINTS (PHASES 1-3) ---
+# --- 3. THE PROMPT BLUEPRINTS (PHASES 1-4) ---
 PHASE_1_PROMPT = """
 Act as an expert in curriculum design. Transform the content of the provided text into an exceptionally engaging and informative **Lecture Guide**.
 The guide should be structured with:
@@ -116,6 +203,20 @@ Here is the guide to distill:
 ---
 """
 
+PHASE_4_PROMPT = """
+Using the following comprehensive study notes (Phase 1, 2, and 3), write a dialogue script between Alex (host) and Jamie (expert).
+
+Context Notes:
+{input_text}
+
+Requirements:
+1. The script MUST be approximately 1,100 words long to ensure a 7-minute duration.
+2. Alex should differ to Jamie for explanations but be a curious, energetic learner who uses relatable analogies.
+3. Jamie should be the expert guide, clarifying technical logic clearly.
+4. Output format MUST be a raw JSON list of objects: [{{ "speaker": "Alex", "text": "..." }}, {{ "speaker": "Jamie", "text": "..." }}]
+5. Do not include any markdown formatting (like ```json ... ```) in the output, just the raw JSON string.
+"""
+
 # --- 4. THE MAIN ASSEMBLY LINE (UPGRADED) ---
 
 def find_pdf_in_folder():
@@ -126,9 +227,48 @@ def find_pdf_in_folder():
             return file
     return None # Return None if no PDF is found
 
-def main():
+def clean_and_parse_json(raw_text):
+    """
+    Robustly cleans and parses JSON from LLM output.
+    Handles markdown code blocks, missing delimiters, etc.
+    """
+    if not raw_text:
+        return None
+        
+    # 1. Strip Markdown Code Blocks
+    cleaned = re.sub(r'```json\s*|\s*```', '', raw_text, flags=re.IGNORECASE).strip()
+    
+    # 2. Try Standard Parse
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+        
+    # 3. Aggressive Fixes (Common LLM Errors)
+    try:
+        # Fix 1: Missing comma between objects: } { -> }, {
+        cleaned_fixed = re.sub(r'\}\s*\{', '}, {', cleaned)
+        
+        # Fix 2: Missing closing brace AND comma between objects: ... "text": "..." { "speaker": ...
+        # We look for a closing quote, whitespace, and then the start of a new speaker object
+        cleaned_fixed = re.sub(r'\"\s*\{\s*\"speaker\"', '"}, {"speaker"', cleaned_fixed)
+        
+        # Fix 3: Lists missing enclosing brackets
+        if not cleaned_fixed.strip().startswith('['):
+            cleaned_fixed = f"[{cleaned_fixed.strip()}]"
+            
+        return json.loads(cleaned_fixed)
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse JSON after aggressive cleaning: {e}")
+        return None
+
+async def run_workflow():
     """The main function that runs the automated workflow."""
     print("--- Main function has started. Beginning automated workflow... ---")
+    
+    # NEW: Debugging info
+    print(f"Current Working Directory: {os.getcwd()}")
+    print(f"Files in current folder: {os.listdir('.')}")
     
     # NEW: Automatically find the PDF instead of using a hardcoded path
     pdf_file_path = find_pdf_in_folder()
@@ -143,15 +283,16 @@ def main():
     print(f"Output will be saved in the '{output_folder}' folder.")
     
     base_filename = os.path.splitext(os.path.basename(pdf_file_path))[0]
+    
     pdf_text = extract_text_from_pdf(pdf_file_path)
-    if "Error" in pdf_text:
+    if pdf_text and "Error" in pdf_text and len(pdf_text) < 100: # Simple check for the file-not-found error string from helper
         print(pdf_text)
         return
 
     # --- PHASE 1 ---
     print("\n[Phase 1] Generating Lecture Guide...")
     lecture_guide = generate_ai_response(GOOGLE_API_KEY, PHASE_1_PROMPT.format(input_text=pdf_text))
-    if "Error" not in lecture_guide:
+    if lecture_guide:
         print("✅ Connection to Google AI successful!")
         filename_p1 = f"{base_filename}_Phase1_Lecture_Guide"
         md_path = save_output_to_md(lecture_guide, filename_p1, output_folder)
@@ -162,13 +303,13 @@ def main():
         except OSError as e:
             print(f"Error removing file: {e}")
     else:
-        print(f"\n❌ Connection to Google AI failed. Details: {lecture_guide}")
+        print(f"\n❌ Connection to Google AI failed. Check logs for details.")
         return
 
     # --- PHASE 2 ---
     print("\n[Phase 2] Applying Core Recipe...")
     structured_guide = generate_ai_response(GOOGLE_API_KEY, PHASE_2_PROMPT.format(input_text=lecture_guide))
-    if "Error" not in structured_guide:
+    if structured_guide:
         filename_p2 = f"{base_filename}_Phase2_Structured_Guide"
         md_path = save_output_to_md(structured_guide, filename_p2, output_folder)
         convert_md_to_docx(structured_guide, filename_p2, output_folder)
@@ -178,13 +319,13 @@ def main():
         except OSError as e:
             print(f"Error removing file: {e}")
     else:
-        print(structured_guide)
+        print("Failed to generate Phase 2 output.")
         return
 
     # --- PHASE 3 ---
     print("\n[Phase 3] Distilling Exam Prep Notes...")
     exam_notes = generate_ai_response(GOOGLE_API_KEY, PHASE_3_PROMPT.format(input_text=structured_guide))
-    if "Error" not in exam_notes:
+    if exam_notes:
         filename_p3 = f"{base_filename}_Phase3_Exam_Prep_Notes"
         md_path = save_output_to_md(exam_notes, filename_p3, output_folder)
         convert_md_to_docx(exam_notes, filename_p3, output_folder)
@@ -194,10 +335,58 @@ def main():
         except OSError as e:
             print(f"Error removing file: {e}")
     else:
-        print(exam_notes)
+        print("Failed to generate Phase 3 output.")
         return
+        
+    # --- PHASE 4: AUDIO OVERVIEW ---
+    print("\n[Phase 4] Generating Audio Overview...")
+    
+    # 1. Generate Script
+    print("Generating Podcast Script...")
+    
+    # Combine content from all phases for maximum context
+    combined_context = f"""
+    --- PHASE 1: LECTURE GUIDE ---
+    {lecture_guide}
+    
+    --- PHASE 2: STRUCTURED GUIDE ---
+    {structured_guide}
+    
+    --- PHASE 3: EXAM NOTES ---
+    {exam_notes}
+    """
+    
+    # NOTE: Using combined context (Phase 1-3) as requested
+    raw_script_response = generate_podcast_script(combined_context, OPENROUTER_API_KEY)
+    
+    if raw_script_response:
+        script_data = clean_and_parse_json(raw_script_response)
+        
+        if script_data:
+            script_filename = "podcast_script.json"
+            script_path = os.path.join(output_folder, script_filename)
+        
+            with open(script_path, 'w', encoding='utf-8') as f:
+                json.dump(script_data, f, indent=2)
+            print(f"Script saved to {script_path}")
+            
+            # 2. Synthesize Audio
+            audio_filename = "audio_overview.mp3" # Requested name: audio_overview.mp3
+            audio_path = os.path.join(output_folder, audio_filename)
+            
+            # Verify we are passing the output path correctly
+            print(f"Synthesizing audio to: {audio_path}")
+            await audio_generator.synthesize_audio(script_path, audio_path)
+        else:
+            print(f"Error: Failed to parse generated script as JSON details.\nRaw output:\n{raw_script_response}")
+    else:
+        print("Skipping Audio Phase: Script generation failed or returned empty.")
+
     
     print("\n--- AUTOMATED WORKFLOW COMPLETE ---")
+
+def main():
+    asyncio.run(run_workflow())
 
 # --- 5. PHASE 4 - THE SPECIALIST TOOLKIT ---
 # (This section remains the same, to be used manually)

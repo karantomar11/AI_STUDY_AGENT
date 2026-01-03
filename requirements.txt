@@ -1,0 +1,6 @@
+google-generativeai
+pdfplumber
+pypandoc
+edge-tts
+openai
+python-dotenv
