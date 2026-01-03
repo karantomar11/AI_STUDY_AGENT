@@ -10,11 +10,12 @@ Built using the **Google Gemini AI API**, this lightweight project demonstrates 
 
 ## 🎯 Overview
 
-**AI Study Agent** automates your study workflow by analyzing lecture PDFs and producing three levels of notes plus an audio overview:
-1. **Structured Lecture Guide**
-2. **Readable Concept Breakdown**
-3. **Concise Exam Preparation Notes**
-4. **Audio Overview Podcast** (Hosted by "Alex" and "Jamie")
+**AI Study Agent** automates your study workflow by analyzing lecture PDFs and producing a complete multi-modal study pack:
+1. **Lecture Architecture Guide** (Phase 1)
+2. **Deep-Technical Systems Blueprint** (Phase 2)
+3. **Exam Prep Notes** (Phase 3)
+4. **Audio Overview Podcast** (Phase 4)
+5. **Feynman Mastery Page** (Phase 5)
 
 It also supports an **optional Phase 4 toolkit** for expanding details and validating code against source material context.
 
@@ -24,10 +25,11 @@ It also supports an **optional Phase 4 toolkit** for expanding details and valid
 
 - **Automatic PDF Detection** — Finds and processes the first PDF in its folder.  
 - **Gemini AI Integration** — Generates guides, summaries, and exam notes using Google’s Gemini 1.5 Flash model.  
-- **Multi-Phase Summarization Flow** — Three structured stages of output: *Lecture Guide → Structured Guide → Exam Notes*.  
-- **Audio Overview Generation** — Creates a 7-minute dialogue-based podcast (`.mp3`) summarizing the material using `edge-tts` and OpenRouter.
-- **Auto File Management** — Saves `.md` outputs, converts them to `.docx`, and cleans up temporary files.  
-- **Expandable AI Tools** — Optional helpers for detailed text expansion and code accuracy verification.
+- **Reasoning Engine (OpenRouter)** — Uses `xiaomi/mimo-v2-flash` with **Reasoning Enabled** to generate deep analogies and synthesize content.
+- **Multi-Phase Summarization Flow** — Five structured stages of output, from academic blueprints to conversational audio.  
+- **Audio Overview Generation** — Creates a 7-minute dialogue-based podcast (`.mp3`) summarizing the material using `edge-tts`.
+- **Feynman Technique Module** — Synthesizes all notes into a single "Mastery Page" with 12-year-old analogies and jargon decrypters.
+- **Auto File Management** — Saves `.md`, `.docx`, and `.mp3` outputs, and cleans up temporary files.  
 
 ***
 
@@ -35,10 +37,11 @@ It also supports an **optional Phase 4 toolkit** for expanding details and valid
 
 | Stage | Description | Output |
 |-------|--------------|--------|
-| Phase 1 | Creates an engaging **Lecture Guide** with structured flow, analogies, and learning objectives. | `{filename}_Phase1_Lecture_Guide.docx` |
-| Phase 2 | Refines the lecture guide into **structured explanations and pseudocode examples**. | `{filename}_Phase2_Structured_Guide.docx` |
+| Phase 1 | Creates an engaging **Lecture Architecture Guide** with structured flow and learning objectives. | `{filename}_Phase1_Lecture_Guide.docx` |
+| Phase 2 | Deconstructs concepts into a **Deep-Technical Blueprint** with rigorous system logic and edge cases. | `{filename}_Phase2_Structured_Guide.docx` |
 | Phase 3 | Generates compact **Exam Prep Notes** with key definitions, formulas, and Q&A sections. | `{filename}_Phase3_Exam_Prep_Notes.docx` |
-| Phase 4 | Synthesizes a **Audio Podcast** dialogue between two AI hosts covering the entire material. | `audio_overview.mp3` |
+| Phase 4 | Synthesizes an **Audio Podcast** dialogue between two AI hosts covering the entire material. | `audio_overview.mp3` |
+| Phase 5 | Distills everything into a **Feynman Mastery Page** using a logic-first reasoning engine. | `{filename}_Phase5_Feynman_Technique.docx` |
 
 ***
 
@@ -47,7 +50,7 @@ It also supports an **optional Phase 4 toolkit** for expanding details and valid
 - Python 3.10 or higher  
 - Pandoc (for `.docx` conversion)  
 - Google Generative AI SDK  
-- `pdfplumber` and `pypandoc`  
+- `pdfplumber`, `pypandoc`, `python-docx`
 - `edge-tts`, `openai`, `python-dotenv`
 
 Install dependencies with:
@@ -76,7 +79,7 @@ Install **Pandoc** (system-wide):
 python3 agent.py
 ```
 
-4. After completion, check the **Final_Notes** folder for `.docx` outputs and the `audio_overview.mp3`.  
+4. After completion, check the **Final_Notes** folder for your study pack and audio.
 
 All temporary Markdown files are automatically removed after conversion.
 
@@ -88,10 +91,11 @@ Input:
 Lecture slides or a PDF textbook chapter  
 
 Output:  
-- `Lecture Guide (Deep Understanding)`  
-- `Structured Guide (with pseudocode)`  
-- `Exam Notes (Concise Revision Sheet)`
+- `Lecture Guide (Context & Hook)`  
+- `Structured Guide (Technical Specs & Logic)`  
+- `Exam Notes (Rapid Revision)`
 - `Audio Podcast (7-minute overview)`
+- `Feynman Mastery Page (Analogy & Synthesis)`
 
 ***
 
@@ -108,12 +112,15 @@ Output:
 AI-Study-Agent/
 ├── agent.py
 ├── audio_generator.py
+├── feynman_generator.py
 ├── .env
 ├── requirements.txt
 ├── Final_Notes/
-│   ├── Lecture_Guide.docx
-│   ├── Structured_Guide.docx
-│   ├── Exam_Prep_Notes.docx
+│   ├── ...Phase1_Lecture_Guide.docx
+│   ├── ...Phase2_Structured_Guide.docx
+│   ├── ...Phase3_Exam_Prep_Notes.docx
+│   ├── ...Phase5_Feynman_Technique.docx
+│   ├── podcast_script.json
 │   └── audio_overview.mp3
 └── your_lecture.pdf
 ```
@@ -124,7 +131,7 @@ AI-Study-Agent/
 
 - Automate academic summarization
 - Prototype self-improving AI study agents
-- Demonstrate workflow orchestration via Gemini API and OpenRouter
+- Demonstrate workflow orchestration via Gemini API and OpenRouter (MoE)
 
 ***
 

@@ -25,7 +25,9 @@ import asyncio
 import json
 import re
 from openai import OpenAI
+from docx import Document
 import audio_generator
+import feynman_generator
 
 import os
 from dotenv import load_dotenv
@@ -152,9 +154,9 @@ def convert_md_to_docx(md_content, filename, folder):
         print("Skipping .docx conversion: pypandoc library not installed.")
         return
     
-    # Fix: Sanitize content to prevent Pandoc from reading careless AI "---" dividers as failed YAML metadata
-    if md_content.strip().startswith("---"):
-        md_content = f"# {filename}\n\n" + md_content
+    # Fix: Always prepend a title to ensure the file doesn't start with "---" or other YAML-like syntax
+    # This effectively disables Pandoc's metadata parsing by forcing the first line to be a Header.
+    md_content = f"# {filename}\n\n" + md_content
 
     docx_filename = f"{filename}.docx"
     full_path = os.path.join(folder, docx_filename)
@@ -167,25 +169,62 @@ def convert_md_to_docx(md_content, filename, folder):
 
 # --- 3. THE PROMPT BLUEPRINTS (PHASES 1-4) ---
 PHASE_1_PROMPT = """
-Act as an expert in curriculum design. Transform the content of the provided text into an exceptionally engaging and informative **Lecture Guide**.
-The guide should be structured with:
-1.  **Overall Structure & Flow:** A fitting lecture title, 2-3 core learning objectives, an engaging introduction/hook, and logical segmentation of the content.
-2.  **For Each Key Section:** Deep and clear key talking points, "make it click" explanations with vivid analogies, and interactive engagement strategies.
-3.  **Anticipate Confusion:** Point out areas where students might get stuck and suggest ways to clarify.
-4.  **Strong Conclusion:** A powerful summary of key takeaways.
-Here is the raw text from the lecture:
+ACT AS: A Senior Professor & Curriculum Designer with 20 years of experience in Software Engineering.
+TASK: Transform the raw text into a high-fidelity "Lecture Architecture Guide." 
+
+STRATEGY: Use Bloom's Taxonomy to set objectives and Active Learning principles for engagement.
+
+STRICT STRUCTURE (Follow this EXACTLY):
+# [LECTURE TITLE: Catchy & Professional]
+## I. Metadata
+- **Curriculum Level:** Undergraduate/Graduate
+- **Estimated Duration:** 75 Minutes
+- **3 Core Learning Objectives:** Use action verbs (Analyze, Differentiate, Implement).
+
+## II. The Hook (5 Mins)
+- **The "Why":** A real-world scenario where this topic prevents a multi-million dollar disaster.
+- **Critical Question:** A provocative question to ask students at the start.
+
+## III. Modular Content Blocks (Repeat for each key concept)
+### Concept: [Name]
+- **The Core Logic:** A 2-sentence explanation for a senior engineer.
+- **Pedagogical Analogy:** A "Stick-in-the-brain" analogy (Sports, Cooking, or Gaming).
+- **Deep Dive Talking Points:** 3-5 high-density bullet points covering technical nuances.
+- **Engagement Strategy:** One specific "Think-Pair-Share" or "Poll" question.
+
+## IV. The Summary & Exit Ticket
+- **The "So What?":** Why this matters for their future career.
+- **Exit Ticket:** One conceptual question to verify understanding before the class ends.
+
+SOURCE TEXT:
 ---
 {input_text}
 ---
 """
 PHASE_2_PROMPT = """
-Now, apply the specific for each part recipe for each key concept in the provided Lecture Guide.
-Re-structure the entire guide so that for each topic, you provide these four distinct sections in order:
-1.  **Formal Explanation:** The precise, academic definition.
-2.  **Easy-to-Digest Explanation:** A simple, intuitive analogy or high-level summary.
-3.  **Easy-to-Digest Example:** A concrete, step-by-step example.
-4.  **Pseudocode & Explanation:** The explicit pseudocode, followed by a separate, clear explanation of how the code works.
-Here is the Lecture Guide to transform:
+ACT AS: A Senior Technical Systems Architect and Exam Proctor.
+TASK: Deconstruct the 'Lecture Guide' into a 'Deep-Technical Blueprint' (Phase 2).
+
+CONSTRAINTS:
+1. NO SURFACE-LEVEL DEFINITIONS. You must provide the "Engine Logic" behind every concept.
+2. CATEGORICAL GROUPING: Group concepts into [Module I: Foundations], [Module II: Model Mechanics], and [Module III: Economic Constraints].
+3. STRICT SCHEMA: Every concept must be deconstructed using the [SPECIFICATION BLOCK] format below.
+
+---
+### [MODULE NAME]
+#### CONCEPT: [Exact Name from Lecture Guide]
+
+| Spec Detail | High-Density Content |
+| :--- | :--- |
+| **Architectural Logic** | The formal, high-precision definition. Include the "Why it exists" from a systems engineering perspective. |
+| **12-Year-Old Analogy** | A simplified, non-technical comparison that proves the logic (e.g., LEGO, Baking, Video Games). |
+| **Technical Nuance** | Identify 2 specific "hidden" details or edge cases mentioned in the source (e.g., the cost of late-stage rework or the '90% finished' syndrome). |
+| **Logic/Workflow** | A structured Step 1 -> Step 2 -> Step 3 flow or Pseudocode block representing the execution of this concept. |
+| **Exam 'Trap'** | A specific way a student might confuse this with another concept (e.g., Verification vs. Validation). |
+
+---
+
+LECTURE GUIDE SOURCE:
 ---
 {input_text}
 ---
@@ -257,6 +296,11 @@ def clean_and_parse_json(raw_text):
         if not cleaned_fixed.strip().startswith('['):
             cleaned_fixed = f"[{cleaned_fixed.strip()}]"
             
+        # Fix 4: Escape unescaped backslashes (common in LaTeX or file paths)
+        # This is tricky without breaking valid escapes like \n or \". 
+        # A simple approach is often enough: only escape \ if it's NOT followed by " \ / b f n r t u
+        cleaned_fixed = re.sub(r'\\(?![/u"bfnrt\\])', r'\\\\', cleaned_fixed)
+
         return json.loads(cleaned_fixed)
     except json.JSONDecodeError as e:
         print(f"Failed to parse JSON after aggressive cleaning: {e}")
@@ -370,6 +414,8 @@ async def run_workflow():
                 json.dump(script_data, f, indent=2)
             print(f"Script saved to {script_path}")
             
+
+            
             # 2. Synthesize Audio
             audio_filename = "audio_overview.mp3" # Requested name: audio_overview.mp3
             audio_path = os.path.join(output_folder, audio_filename)
@@ -383,6 +429,41 @@ async def run_workflow():
         print("Skipping Audio Phase: Script generation failed or returned empty.")
 
     
+    print("\n[Phase 5] Distilling Feynman Mastery...")
+    
+    # Harvest Phase 4 Text for Context
+    podcast_text_content = ""
+    if os.path.exists(os.path.join(output_folder, "podcast_script.json")):
+        try:
+            with open(os.path.join(output_folder, "podcast_script.json"), 'r') as f:
+                script_data = json.load(f)
+                # Combine all dialogue into one text block
+                podcast_text_content = "\n".join([f"{entry.get('speaker', 'Unknown')}: {entry.get('text', '')}" for entry in script_data])
+        except Exception as e:
+            print(f"Warning: Could not read podcast script for context: {e}")
+    else:
+        print("Warning: Podcast script not found. Proceeding with Phase 1-3 context only.")
+
+    # Data Harvesting (Zero Context Loss)
+    master_study_context = f"""
+    === PHASE 1: LECTURE GUIDE ===
+    {lecture_guide if 'lecture_guide' in locals() else 'N/A'}
+
+    === PHASE 2: STRUCTURED GUIDE ===
+    {structured_guide if 'structured_guide' in locals() else 'N/A'}
+
+    === PHASE 3: EXAM NOTES ===
+    {exam_notes if 'exam_notes' in locals() else 'N/A'}
+
+    === PHASE 4: PODCAST DIALOGUE ===
+    {podcast_text_content}
+    """
+    
+    feynman_filename = f"{base_filename}_Phase5_Feynman_Technique.docx"
+    feynman_path = os.path.join(output_folder, feynman_filename)
+    
+    feynman_generator.generate_feynman_doc(master_study_context, OPENROUTER_API_KEY, feynman_path)
+
     print("\n--- AUTOMATED WORKFLOW COMPLETE ---")
 
 def main():
