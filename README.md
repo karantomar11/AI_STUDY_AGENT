@@ -29,7 +29,8 @@ It also supports an **optional Phase 4 toolkit** for expanding details and valid
 - **Multi-Phase Summarization Flow** — Five structured stages of output, from academic blueprints to conversational audio.  
 - **Audio Overview Generation** — Creates a 7-minute dialogue-based podcast (`.mp3`) summarizing the material using `edge-tts`.
 - **Feynman Technique Module** — Synthesizes all notes into a single "Mastery Page" with 12-year-old analogies and jargon decrypters.
-- **Auto File Management** — Saves `.md`, `.docx`, and `.mp3` outputs, and cleans up temporary files.  
+- **Universal Visualizer** — Generates a multi-colored, high-density mindmap using a robust Mermaid.js engine.
+- **Auto File Management** — Saves `.docx`, `.mp3`, and `.png` outputs automatically.  
 
 ***
 
@@ -42,6 +43,7 @@ It also supports an **optional Phase 4 toolkit** for expanding details and valid
 | Phase 3 | Generates compact **Exam Prep Notes** with key definitions, formulas, and Q&A sections. | `{filename}_Phase3_Exam_Prep_Notes.docx` |
 | Phase 4 | Synthesizes an **Audio Podcast** dialogue between two AI hosts covering the entire material. | `audio_overview.mp3` |
 | Phase 5 | Distills everything into a **Feynman Mastery Page** using a logic-first reasoning engine. | `{filename}_Phase5_Feynman_Technique.docx` |
+| Phase 6 | Generates a **Visual Mindmap** (Endgame Edition) with multi-colored pillars. | `{filename}_Phase6_Infographic.png` |
 
 ***
 
