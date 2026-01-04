@@ -1,145 +1,101 @@
+# AI Study Agent (Production Edition) 🚀
 
-***
-
-# AI Study Agent
-
-A smart Python-based AI assistant that reads academic PDFs, structures them into multi-phase lecture notes, and automatically converts them into `.docx` exam-prep documents.  
-Built using the **Google Gemini AI API**, this lightweight project demonstrates how generative AI can transform raw educational text into structured, self-guided study material.
+A high-density, multi-modal **AI Study Factory** that transforms raw academic PDFs into a professional study suite. This agent orchestrates multiple LLMs (Google Gemini 1.5 Flash & Xiaomi MiMo-V2-Flash) to produce textbook-quality notes, audio podcasts, and artistic infographics.
 
 ***
 
 ## 🎯 Overview
 
-**AI Study Agent** automates your study workflow by analyzing lecture PDFs and producing a complete multi-modal study pack:
-1. **Lecture Architecture Guide** (Phase 1)
-2. **Deep-Technical Systems Blueprint** (Phase 2)
-3. **Exam Prep Notes** (Phase 3)
-4. **Audio Overview Podcast** (Phase 4)
-5. **Feynman Mastery Page** (Phase 5)
-
-It also supports an **optional Phase 4 toolkit** for expanding details and validating code against source material context.
+The **AI Study Agent** is no longer just a summarizer; it is a **full-scale academic production line**. It deconstructs complex technical material and rebuilds it across six specialized phases designed to target every learning pathway (Visual, Auditory, and Technical).
 
 ***
 
-## ⚡ Features
+## ⚡ New & Advanced Features
 
-- **Automatic PDF Detection** — Finds and processes the first PDF in its folder.  
-- **Gemini AI Integration** — Generates guides, summaries, and exam notes using Google’s Gemini 1.5 Flash model.  
-- **Reasoning Engine (OpenRouter)** — Uses `xiaomi/mimo-v2-flash` with **Reasoning Enabled** to generate deep analogies and synthesize content.
-- **Multi-Phase Summarization Flow** — Five structured stages of output, from academic blueprints to conversational audio.  
-- **Audio Overview Generation** — Creates a 7-minute dialogue-based podcast (`.mp3`) summarizing the material using `edge-tts`.
-- **Feynman Technique Module** — Synthesizes all notes into a single "Mastery Page" with 12-year-old analogies and jargon decrypters.
-- **Universal Visualizer** — Generates a multi-colored, high-density mindmap using a robust Mermaid.js engine.
-- **Auto File Management** — Saves `.docx`, `.mp3`, and `.png` outputs automatically.  
+- **Advanced Math Engine (OMML)**: Formulas are no longer "dirty" text. The agent renders LaTeX into **Native Microsoft Word Equation Objects**, making them perfectly formatted and fully editable.
+- **Universal Styling Engine (`doc_styler.py`)**: Automatically applies professional branding (**Dark Blue** headers), highlights (==turquoise== for analogies), and bold/underline formatting across all phases.
+- **Nuclear-Sanitized Visualizer (Phase 6)**: A robust Mermaid.js engine that uses a "Nuclear Scrubber" to ensure infographics are generated as **Hand-Drawn, Multi-colored PNGs** without rendering errors (Status 400 fix).
+- **Reasoning-Driven Synthesis**: Uses OpenRouter’s **Reasoning models** to create deep, high-fidelity analogies (e.g., the "Lego Castle" for Process Models).
+- **Audio Overview**: Generates a professional 2-person podcast dialogue using `edge-tts` with a **"JSON Rescue" layer** to prevent synthesis crashes.
 
 ***
 
-## 🧠 Project Architecture
+## 🧠 The Six Phases of Mastery
 
-| Stage | Description | Output |
-|-------|--------------|--------|
-| Phase 1 | Creates an engaging **Lecture Architecture Guide** with structured flow and learning objectives. | `{filename}_Phase1_Lecture_Guide.docx` |
-| Phase 2 | Deconstructs concepts into a **Deep-Technical Blueprint** with rigorous system logic and edge cases. | `{filename}_Phase2_Structured_Guide.docx` |
-| Phase 3 | Generates compact **Exam Prep Notes** with key definitions, formulas, and Q&A sections. | `{filename}_Phase3_Exam_Prep_Notes.docx` |
-| Phase 4 | Synthesizes an **Audio Podcast** dialogue between two AI hosts covering the entire material. | `audio_overview.mp3` |
-| Phase 5 | Distills everything into a **Feynman Mastery Page** using a logic-first reasoning engine. | `{filename}_Phase5_Feynman_Technique.docx` |
-| Phase 6 | Generates a **Visual Mindmap** (Endgame Edition) with multi-colored pillars. | `{filename}_Phase6_Infographic.png` |
+| Stage | Name | Description | Output |
+|-------|------|-------------|--------|
+| **Phase 1** | **Lecture Guide** | High-level architecture, "The Hook," and learning objectives. | `{fn}_Phase1_Lecture_Guide.docx` |
+| **Phase 2** | **Technical Blueprint** | Deconstructs concepts into Formal Specs, Analogies, and Pseudocode. | `{fn}_Phase2_Structured_Guide.docx` |
+| **Phase 3** | **Exam Prep Notes** | Rapid revision definitions and step-by-step formula solutions. | `{fn}_Phase3_Exam_Prep_Notes.docx` |
+| **Phase 4** | **Audio Overview** | Conversational 2-person podcast (`.mp3`) summarizing the core logic. | `audio_overview.mp3` |
+| **Phase 5** | **Feynman Mastery** | Distills complex jargon into 12-year-old analogies and "Blind Spot" audits. | `{fn}_Phase5_Feynman_Technique.docx` |
+| **Phase 6** | **Universal Visualizer** | A hand-drawn, multicolored mindmap summarizing technical pillars. | `Phase6_Infographic.png` |
+
+***
+
+## 🛠️ Technical Stack
+
+- **Core AI**: Google Gemini 1.5 Flash (Phases 1-3)
+- **Reasoning AI**: Xiaomi MiMo-V2-Flash via OpenRouter (Phases 4-6)
+- **Math Rendering**: `math2docx` (Office Math Markup Language)
+- **Document Logic**: `python-docx` + `pypandoc`
+- **Visual Logic**: Mermaid.ink API (Base64 URL-Safe State Protocol)
+- **Voice Synthesis**: `edge-tts` (Andrew & Ava Neural Voices)
 
 ***
 
 ## 🧩 Requirements
 
-- Python 3.10 or higher  
-- Pandoc (for `.docx` conversion)  
-- Google Generative AI SDK  
-- `pdfplumber`, `pypandoc`, `python-docx`
-- `edge-tts`, `openai`, `python-dotenv`
-
-Install dependencies with:
-
 ```bash
 pip install -r requirements.txt
 ```
 
-Install **Pandoc** (system-wide):  
-[https://pandoc.org/installing.html](https://pandoc.org/installing.html)
+**Core dependencies**: `google-generativeai`, `openai`, `math2docx`, `python-docx`, `edge-tts`, `requests`, `python-dotenv`.
 
 ***
 
 ## ⚙️ Setup & Run
 
-1. Place `agent.py` and **one** lecture PDF in a folder.  
-2. Create a `.env` file in the root directory:
+1. **API Keys**: Place your keys in a `.env` file.
    ```env
-   GOOGLE_API_KEY=your_google_api_key
-   OPENROUTER_API_KEY=your_openrouter_api_key
+   GOOGLE_API_KEY=your_key
+   OPENROUTER_API_KEY=your_key
    OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
    ```
-3. Run the script:
 
-```bash
-python3 agent.py
-```
+2. **Input**: Place your lecture PDF in the root folder.
 
-4. After completion, check the **Final_Notes** folder for your study pack and audio.
+3. **Execute**:
+   ```bash
+   python agent.py
+   ```
 
-All temporary Markdown files are automatically removed after conversion.
-
-***
-
-## 🛠️ Example Workflow
-
-Input:  
-Lecture slides or a PDF textbook chapter  
-
-Output:  
-- `Lecture Guide (Context & Hook)`  
-- `Structured Guide (Technical Specs & Logic)`  
-- `Exam Notes (Rapid Revision)`
-- `Audio Podcast (7-minute overview)`
-- `Feynman Mastery Page (Analogy & Synthesis)`
+4. **Result**: Open the `Final_Notes/` folder for your complete study package.
 
 ***
 
-## 🧰 Optional Specialist Tools (Phase 4)
+## � Project Architecture
 
-- **expand_on_detail()** — Deepens an existing section's content.  
-- **ensure_source_accuracy()** — Aligns pseudocode closely with source material and provides plain-language explanations.
-
-***
-
-## 📁 Folder Structure
-
-```
+```plaintext
 AI-Study-Agent/
-├── agent.py
-├── audio_generator.py
-├── feynman_generator.py
-├── .env
-├── requirements.txt
-├── Final_Notes/
-│   ├── ...Phase1_Lecture_Guide.docx
-│   ├── ...Phase2_Structured_Guide.docx
-│   ├── ...Phase3_Exam_Prep_Notes.docx
-│   ├── ...Phase5_Feynman_Technique.docx
-│   ├── podcast_script.json
-│   └── audio_overview.mp3
-└── your_lecture.pdf
+├── agent.py               # Main Workflow Orchestrator
+├── doc_styler.py          # Universal Styling & Math Engine
+├── doc_visualizer.py      # Nuclear Sanitizer & Mermaid Renderer
+├── audio_generator.py     # TTS & Podcast Logic
+├── feynman_generator.py   # Analogical Reasoning Module
+├── Final_Notes/           # Production Output Folder
+└── requirements.txt       # Project Dependencies
 ```
 
 ***
 
-## 🚀 Project Goals
+## 🚀 Future Roadmap
 
-- Automate academic summarization
-- Prototype self-improving AI study agents
-- Demonstrate workflow orchestration via Gemini API and OpenRouter (MoE)
+- **Phase 7**: Automatic Anki Flashcard generation via `.apkg` export.
+- **Phase 8**: Interactive Q&A Chatbot trained on the generated Blueprint.
 
 ***
 
 ## 🪪 License
 
-This project is licensed under the **MIT License**.  
-You are free to clone, modify, and use the code for personal or research purposes.
-
-***
+**MIT License**. Turn your PDFs into professional mastery suites today!
