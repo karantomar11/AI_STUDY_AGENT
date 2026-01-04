@@ -5,3 +5,4 @@ edge-tts
 openai
 python-dotenv
 python-docx
+requests

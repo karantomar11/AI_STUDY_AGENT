@@ -28,6 +28,8 @@ from openai import OpenAI
 from docx import Document
 import audio_generator
 import feynman_generator
+import doc_styler
+import doc_visualizer
 
 import os
 from dotenv import load_dotenv
@@ -169,74 +171,80 @@ def convert_md_to_docx(md_content, filename, folder):
 
 # --- 3. THE PROMPT BLUEPRINTS (PHASES 1-4) ---
 PHASE_1_PROMPT = """
-ACT AS: A Senior Professor & Curriculum Designer with 20 years of experience in Software Engineering.
-TASK: Transform the raw text into a high-fidelity "Lecture Architecture Guide." 
+Act as a Senior Professor & Curriculum Designer. Transform the raw text into a high-fidelity **Lecture Architecture Guide**. 
 
-STRATEGY: Use Bloom's Taxonomy to set objectives and Active Learning principles for engagement.
-
-STRICT STRUCTURE (Follow this EXACTLY):
+STRICT STRUCTURE:
 # [LECTURE TITLE: Catchy & Professional]
-## I. Metadata
-- **Curriculum Level:** Undergraduate/Graduate
-- **Estimated Duration:** 75 Minutes
-- **3 Core Learning Objectives:** Use action verbs (Analyze, Differentiate, Implement).
+## I. Metadata & Goals
+- **Learning Objectives:** Use action verbs (Analyze, Differentiate, Implement).
+- **Estimated Duration:** 75 Minutes.
 
 ## II. The Hook (5 Mins)
-- **The "Why":** A real-world scenario where this topic prevents a multi-million dollar disaster.
-- **Critical Question:** A provocative question to ask students at the start.
+- **The "Why":** A Provocative Scenario illustrating why this topic matters.
 
 ## III. Modular Content Blocks (Repeat for each key concept)
 ### Concept: [Name]
-- **The Core Logic:** A 2-sentence explanation for a senior engineer.
-- **Pedagogical Analogy:** A "Stick-in-the-brain" analogy (Sports, Cooking, or Gaming).
-- **Deep Dive Talking Points:** 3-5 high-density bullet points covering technical nuances.
-- **Engagement Strategy:** One specific "Think-Pair-Share" or "Poll" question.
+- **Core Logic:** A 2-sentence high-level explanation.
+- **"Make it Click" Analogy:** A ==highlighted analogy== to ground the concept.
+- **Deep Dive:** 3-5 technical nuances in **bold**.
+- **Engagement:** One specific question to check for understanding.
 
-## IV. The Summary & Exit Ticket
-- **The "So What?":** Why this matters for their future career.
-- **Exit Ticket:** One conceptual question to verify understanding before the class ends.
+## IV. Pedagogical Safety
+- **Anticipate Confusion:** Identify 2 areas where students usually get stuck.
+
+## V. Final Summary
+- **3 Non-Negotiable Takeaways** in __underlined text__.
+
+STRICT FORMATTING RULES:
+1. Wrap ALL formulas, math variables, or technical notation in $ ... $ (e.g. $O(n)$, $E=mc^2$).
+2. Wrap ALL analogies in == ... == (e.g. ==Just like a pizza...==).
+3. Wrap ALL critical final takeaways in __ ... __.
 
 SOURCE TEXT:
 ---
 {input_text}
 ---
 """
+
 PHASE_2_PROMPT = """
-ACT AS: A Senior Technical Systems Architect and Exam Proctor.
-TASK: Deconstruct the 'Lecture Guide' into a 'Deep-Technical Blueprint' (Phase 2).
-
-CONSTRAINTS:
-1. NO SURFACE-LEVEL DEFINITIONS. You must provide the "Engine Logic" behind every concept.
-2. CATEGORICAL GROUPING: Group concepts into [Module I: Foundations], [Module II: Model Mechanics], and [Module III: Economic Constraints].
-3. STRICT SCHEMA: Every concept must be deconstructed using the [SPECIFICATION BLOCK] format below.
+Act as a Technical Lead. Deconstruct the Lecture Guide into a series of **Atomic Concept Blocks**. 
+For EVERY concept mentioned, follow this exact 4-part recipe:
 
 ---
-### [MODULE NAME]
-#### CONCEPT: [Exact Name from Lecture Guide]
+### Concept: [Exact Name]
+1. **Formal Explanation:** The precise, industry-standard definition.
+2. **Easy-to-Digest Explanation:** A simple ==analogy== or "12-year-old level" summary.
+3. **Easy-to-Digest Example:** A concrete, **bolded** step-by-step example.
+4. **Pseudocode & Logic:** - **The Code:** An explicit pseudocode block.
+   - **The Logic:** A clear explanation of the code logic in *italics*.
 
-| Spec Detail | High-Density Content |
-| :--- | :--- |
-| **Architectural Logic** | The formal, high-precision definition. Include the "Why it exists" from a systems engineering perspective. |
-| **12-Year-Old Analogy** | A simplified, non-technical comparison that proves the logic (e.g., LEGO, Baking, Video Games). |
-| **Technical Nuance** | Identify 2 specific "hidden" details or edge cases mentioned in the source (e.g., the cost of late-stage rework or the '90% finished' syndrome). |
-| **Logic/Workflow** | A structured Step 1 -> Step 2 -> Step 3 flow or Pseudocode block representing the execution of this concept. |
-| **Exam 'Trap'** | A specific way a student might confuse this with another concept (e.g., Verification vs. Validation). |
+STRICT FORMATTING RULES:
+1. Wrap ALL formulas, logic notation, or math in $ ... $ (e.g. $Cost = O(n)$).
+2. Wrap ALL analogies in == ... ==.
+3. Use **bold** for specific examples.
 
----
-
-LECTURE GUIDE SOURCE:
+SOURCE GUIDE:
 ---
 {input_text}
 ---
 """
+
 PHASE_3_PROMPT = """
-Using the provided comprehensive guide, create a new document: **Exam Prep Notes**. The goal is to prepare a student for an exam.
-The notes must be concise and focus on:
-1.  **Key Definitions & Must-Memorize Concepts:** A quick-reference list.
-2.  **Core Formulas & Complexities:** A summary of critical formulas and Big O complexities.
-3.  **Algorithm Deep Dives:** A focused look at the mechanics of the core algorithms.
-4.  **Potential Exam Questions & Detailed Answers:** A few likely exam-style questions with step-by-step solutions.
-Here is the guide to distill:
+Act as an Exam Proctor. Distill the material into high-density **Exam Prep Notes**.
+
+STRICT SECTIONS:
+1. **Key Definitions:** List critical terms with ==highlighted== keywords.
+2. **Formula & Complexity Cheat Sheet:** Use **bold** for all Big O or math formulas.
+3. **Algorithm Deep Dives:** Step-by-step mechanics of core logic.
+4. **Potential Exam Questions:** - Question: [Scenario-based]
+   - Answer: [Step-by-step __underlined__ solution]
+
+STRICT FORMATTING RULES:
+1. Wrap ALL formulas, Big O notation, and math in $ ... $ (e.g. $O(n^2)$).
+2. Wrap ALL critical keywords in == ... ==.
+3. Wrap ALL exam solution steps in __ ... __.
+
+SOURCE BLUEPRINT:
 ---
 {input_text}
 ---
@@ -268,43 +276,45 @@ def find_pdf_in_folder():
 
 def clean_and_parse_json(raw_text):
     """
-    Robustly cleans and parses JSON from LLM output.
-    Handles markdown code blocks, missing delimiters, etc.
+    Robustly cleans and parses JSON from AI response.
+    Includes regex fallback for common AI structural errors.
     """
     if not raw_text:
         return None
-        
+
     # 1. Strip Markdown Code Blocks
     cleaned = re.sub(r'```json\s*|\s*```', '', raw_text, flags=re.IGNORECASE).strip()
     
-    # 2. Try Standard Parse
+    # 2. Try Standard JSON Parse
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
+        # If standard parse fails, proceed to regex recovery
         pass
-        
-    # 3. Aggressive Fixes (Common LLM Errors)
-    try:
-        # Fix 1: Missing comma between objects: } { -> }, {
-        cleaned_fixed = re.sub(r'\}\s*\{', '}, {', cleaned)
-        
-        # Fix 2: Missing closing brace AND comma between objects: ... "text": "..." { "speaker": ...
-        # We look for a closing quote, whitespace, and then the start of a new speaker object
-        cleaned_fixed = re.sub(r'\"\s*\{\s*\"speaker\"', '"}, {"speaker"', cleaned_fixed)
-        
-        # Fix 3: Lists missing enclosing brackets
-        if not cleaned_fixed.strip().startswith('['):
-            cleaned_fixed = f"[{cleaned_fixed.strip()}]"
-            
-        # Fix 4: Escape unescaped backslashes (common in LaTeX or file paths)
-        # This is tricky without breaking valid escapes like \n or \". 
-        # A simple approach is often enough: only escape \ if it's NOT followed by " \ / b f n r t u
-        cleaned_fixed = re.sub(r'\\(?![/u"bfnrt\\])', r'\\\\', cleaned_fixed)
 
-        return json.loads(cleaned_fixed)
-    except json.JSONDecodeError as e:
-        print(f"Failed to parse JSON after aggressive cleaning: {e}")
-        return None
+    print("⚠️ Standard JSON parse failed. Attempting aggressive regex recovery...")
+
+    # 3. Regex Pattern Matching for Objects
+    # Matches "speaker": "..." and "text": "..." pairs ignoring structural syntax
+    pattern = r'"speaker"\s*:\s*"(?P<speaker>[^"]+)"\s*,\s*"text"\s*:\s*"(?P<text>(?:\\.|[^"\\])*)"'
+    
+    matches = re.finditer(pattern, raw_text, re.DOTALL)
+    recovered_script = []
+    
+    for match in matches:
+        speaker = match.group("speaker")
+        text = match.group("text")
+        # Basic unescape for the text content
+        text = text.replace('\\"', '"')
+        recovered_script.append({"speaker": speaker, "text": text})
+
+    if recovered_script:
+        print(f"✅ Successfully recovered {len(recovered_script)} lines via regex.")
+        return recovered_script
+
+    # 4. Final Failure
+    print("❌ Failed to parse script even with regex.")
+    return None
 
 async def run_workflow():
     """The main function that runs the automated workflow."""
@@ -339,13 +349,11 @@ async def run_workflow():
     if lecture_guide:
         print("✅ Connection to Google AI successful!")
         filename_p1 = f"{base_filename}_Phase1_Lecture_Guide"
-        md_path = save_output_to_md(lecture_guide, filename_p1, output_folder)
-        convert_md_to_docx(lecture_guide, filename_p1, output_folder)
-        try:
-            os.remove(md_path)
-            print(f"Removed temporary file: {md_path}")
-        except OSError as e:
-            print(f"Error removing file: {e}")
+        # Use Universal Styling Engine
+        docx_path = os.path.join(output_folder, f"{filename_p1}.docx")
+        doc_styler.create_styled_docx(lecture_guide, docx_path)
+        # No temp md file needed for pypandoc anymore, so we don't save/delete md
+
     else:
         print(f"\n❌ Connection to Google AI failed. Check logs for details.")
         return
@@ -355,13 +363,10 @@ async def run_workflow():
     structured_guide = generate_ai_response(GOOGLE_API_KEY, PHASE_2_PROMPT.format(input_text=lecture_guide))
     if structured_guide:
         filename_p2 = f"{base_filename}_Phase2_Structured_Guide"
-        md_path = save_output_to_md(structured_guide, filename_p2, output_folder)
-        convert_md_to_docx(structured_guide, filename_p2, output_folder)
-        try:
-            os.remove(md_path)
-            print(f"Removed temporary file: {md_path}")
-        except OSError as e:
-            print(f"Error removing file: {e}")
+        # Use Universal Styling Engine
+        docx_path = os.path.join(output_folder, f"{filename_p2}.docx")
+        doc_styler.create_styled_docx(structured_guide, docx_path)
+
     else:
         print("Failed to generate Phase 2 output.")
         return
@@ -371,13 +376,10 @@ async def run_workflow():
     exam_notes = generate_ai_response(GOOGLE_API_KEY, PHASE_3_PROMPT.format(input_text=structured_guide))
     if exam_notes:
         filename_p3 = f"{base_filename}_Phase3_Exam_Prep_Notes"
-        md_path = save_output_to_md(exam_notes, filename_p3, output_folder)
-        convert_md_to_docx(exam_notes, filename_p3, output_folder)
-        try:
-            os.remove(md_path)
-            print(f"Removed temporary file: {md_path}")
-        except OSError as e:
-            print(f"Error removing file: {e}")
+        # Use Universal Styling Engine
+        docx_path = os.path.join(output_folder, f"{filename_p3}.docx")
+        doc_styler.create_styled_docx(exam_notes, docx_path)
+
     else:
         print("Failed to generate Phase 3 output.")
         return
@@ -400,7 +402,7 @@ async def run_workflow():
     {exam_notes}
     """
     
-    # NOTE: Using combined context (Phase 1-3) as requested
+    # NOTE: Using combined context (Phase 1-3) 
     raw_script_response = generate_podcast_script(combined_context, OPENROUTER_API_KEY)
     
     if raw_script_response:
@@ -446,23 +448,28 @@ async def run_workflow():
 
     # Data Harvesting (Zero Context Loss)
     master_study_context = f"""
-    === PHASE 1: LECTURE GUIDE ===
-    {lecture_guide if 'lecture_guide' in locals() else 'N/A'}
-
-    === PHASE 2: STRUCTURED GUIDE ===
-    {structured_guide if 'structured_guide' in locals() else 'N/A'}
-
-    === PHASE 3: EXAM NOTES ===
-    {exam_notes if 'exam_notes' in locals() else 'N/A'}
-
-    === PHASE 4: PODCAST DIALOGUE ===
-    {podcast_text_content}
+    --- PHASE 1: LECTURE GUIDE ---
+    {lecture_guide}
+    
+    --- PHASE 2: TECHNICAL BLUEPRINT (PRIORITY) ---
+    {structured_guide}
+    
+    --- PHASE 3: EXAM NOTES ---
+    {exam_notes}
     """
     
     feynman_filename = f"{base_filename}_Phase5_Feynman_Technique.docx"
     feynman_path = os.path.join(output_folder, feynman_filename)
     
+    
     feynman_generator.generate_feynman_doc(master_study_context, OPENROUTER_API_KEY, feynman_path)
+    print(f"✅ Phase 5 Mastery Page Saved: {feynman_path}")
+    print("\n[Phase 6] Generating Universal Visualizer Infographic...")
+    infographic_filename = "Phase6_Infographic.png"
+    infographic_path = os.path.join(output_folder, infographic_filename)
+    
+    # We use the same master context, which prioritizes P2 via the header label we added above
+    doc_visualizer.generate_mindmap_png(master_study_context, OPENROUTER_API_KEY, infographic_path)
 
     print("\n--- AUTOMATED WORKFLOW COMPLETE ---")
 
